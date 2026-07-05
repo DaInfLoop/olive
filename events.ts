@@ -18,6 +18,11 @@ ev.on('open', async () => {
 ev.on('message', async (ev) => {
     if (ev.user === me) return;
 
+    await webClient.conversations.mark({
+        channel: ev.channel,
+        ts: ev.ts
+    })
+
     if (ev.channel.startsWith('D')) {
         const channelInfo = await webClient.conversations.info({
             channel: ev.channel
