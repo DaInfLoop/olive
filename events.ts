@@ -1,6 +1,5 @@
 import { EventEmitter } from "node:events";
 import { webClient } from "./webclient";
-import type { MessageEvent } from "@slack/web-api";
 
 const ev = new EventEmitter();
 
@@ -15,28 +14,28 @@ ev.on('open', async () => {
     }
 });
 
-ev.on('message', async (ev) => {
-    if (ev.user === me) return;
+ev.on('message', async (event) => {
+    if (event.user === me) return;
 
     await webClient.conversations.mark({
-        channel: ev.channel,
-        ts: ev.ts
+        channel: event.channel,
+        ts: event.ts
     })
 
-    if (ev.channel.startsWith('D')) {
+    if (event.channel.startsWith('D')) {
         const channelInfo = await webClient.conversations.info({
-            channel: ev.channel
+            channel: event.channel
         });
 
         if (!channelInfo.ok && !channelInfo.channel) return;
 
         if (channelInfo.channel!.is_im) {
-            console.log(`${ev.user} -> ${ev.text}`)
+            console.log(`${event.user} -> ${event.text}`)
             await webClient.chat.postMessage({
-                channel: ev.channel,
-                text: ev.text + " _(This message has been echoed back.)_",
+                channel: event.channel,
+                text: event.text + " _(This message has been echoed back.)_",
                 blocks: [
-                    ...ev.blocks,
+                    ...event.blocks,
                     {
                         type: 'context',
                         elements: [
