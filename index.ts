@@ -1,38 +1,63 @@
 import "dotenv/config";
-import { WebClient } from "@slack/web-api";
+import { webClient } from "./webclient";
+import events from "./events";
 import { WebSocket } from "node:http";
 
-const webClient = new WebClient(process.env.XOXC, {
-    headers: {
-        'Cookie': `d=${process.env.XOXD}`
+let reconnectionUrl: string | undefined;
+async function getConnectionUrl() {
+    if (reconnectionUrl) {
+        const url = new URL(reconnectionUrl);
+        url.searchParams.set('token', process.env.XOXC!)
+        reconnectionUrl = undefined;
+        return url
+    } else {
+        const websocketInfo = await webClient.apiCall('client.getWebSocketURL');
+
+        if (!websocketInfo.ok) {
+            throw new Error(`client.getWebSocketURL returned ok=false: ${JSON.stringify(websocketInfo)}`);
+        }
+
+        // @ts-expect-error The generic response type doesn't have primary websocket URLs
+        const url = new URL(websocketInfo.primary_websocket_url);
+
+        url.searchParams.set('token', process.env.XOXC!);
+
+        return url;
     }
-});
-
-const websocketInfo = await webClient.apiCall('client.getWebSocketURL');
-
-if (!websocketInfo.ok) {
-    throw new Error(`client.getWebSocketURL returned ok=false: ${JSON.stringify(websocketInfo)}`);
 }
 
-// @ts-expect-error The generic response type doesn't have primary websocket URLs
-const rtmUrl = new URL(websocketInfo.primary_websocket_url);
+function createWebsocket(url: URL) {
+    const rtmSocket = new WebSocket(url, {
+        headers: {
+            'Cookie': `d=${process.env.XOXD}`
+        }
+    });
 
-rtmUrl.searchParams.set('token', process.env.XOXC!);
+    rtmSocket.addEventListener('open', () => {
+        events.emit('open');
+    })
 
-const rtmSocket = new WebSocket(rtmUrl, {
-    headers: {
-        'Cookie': `d=${process.env.XOXD}`        
-    }
-});
+    rtmSocket.addEventListener('message', (ev) => {
+        const msg = JSON.parse(ev.data.toString())
 
-rtmSocket.addEventListener('open', () => {
-    console.log('[OPEN]')
-})
+        if (msg.type === "reconnect_url") {
+            reconnectionUrl = msg.url
+        }
 
-rtmSocket.addEventListener('message', (ev) => {
-    console.log('[MSG]', ev.data.toString())
-})
+        events.emit(msg.type, msg)
+        events.emit('*', msg)
+    })
 
-rtmSocket.addEventListener('error', (ev) => {
-    console.log('[ERR]', ev.error)
-})
+    rtmSocket.addEventListener('error', (ev) => {
+        events.emit('error', ev)
+    })
+
+    rtmSocket.addEventListener('close', (ev) => {
+        events.emit('close', ev)
+    })
+
+    return rtmSocket;
+}
+
+let url = await getConnectionUrl();
+let rtmSocket = createWebsocket(url);
