@@ -62,10 +62,10 @@ async function handleMessage(cmd: string, args: string[], event: any) {
 
 const channelCache = new Map<string, Channel>();
 
-async function getChannel(channelId: string) {
+async function getChannel(channelId: string, force: boolean = false) {
     const cacheHit = channelCache.get(channelId);
 
-    if (cacheHit) return cacheHit;
+    if (cacheHit && !force) return cacheHit;
     else {
         const channelInfo = await webClient.conversations.info({
             channel: channelId
