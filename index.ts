@@ -31,7 +31,11 @@ function createWebsocket(url: URL) {
         headers: {
             'Cookie': `d=${process.env.XOXD}`
         }
-    });
+    }) as WebSocket & { 
+        lastMsgId: number
+    };
+
+    rtmSocket.lastMsgId = 0;
 
     rtmSocket.addEventListener('open', () => {
         events.emit('open');
@@ -41,7 +45,8 @@ function createWebsocket(url: URL) {
         const msg = JSON.parse(ev.data.toString())
 
         if (msg.type === "reconnect_url") {
-            reconnectionUrl = msg.url
+            reconnectionUrl = msg.url;
+            return;
         }
 
         events.emit(msg.type, msg)
@@ -59,5 +64,16 @@ function createWebsocket(url: URL) {
     return rtmSocket;
 }
 
-let url = await getConnectionUrl();
-let rtmSocket = createWebsocket(url);
+const url = await getConnectionUrl();
+export const rtmSocket = createWebsocket(url);
+
+export function startTyping(channel: string, thread_ts?: string) {
+    rtmSocket.lastMsgId += 1;
+
+    rtmSocket.send(JSON.stringify({
+        id: rtmSocket.lastMsgId,
+        type: 'typing',
+        channel,
+        thread_ts
+    }))
+}

@@ -5,6 +5,7 @@ import { webClient, userClient, botClient } from "./webclient";
 import { HELP_MESSAGE, JOIN_T1_MESSAGE } from "./messages";
 import type { BlockAction, BlockButtonAction, BlockElementAction, ButtonAction } from "@slack/bolt";
 import type { Channel } from "@slack/web-api/dist/types/response/ConversationsInfoResponse";
+import { startTyping } from ".";
 
 const ev = new EventEmitter();
 
@@ -27,10 +28,21 @@ const messageSubtypes = [
 ] as const;
 
 async function handleMessage(cmd: string, args: string[], event: any) {
+    startTyping(event.channel);
+    await wait(750);
+
     if (cmd === "help") {
         return await webClient.chat.postMessage({
             channel: event.channel,
             ...HELP_MESSAGE
+        })
+    }
+
+    if (cmd === "typing") {
+        await wait(1250); // for a total of 2000ms
+        return await webClient.chat.postMessage({
+            channel: event.channel,
+            text: "okay!"
         })
     }
 
@@ -39,6 +51,7 @@ async function handleMessage(cmd: string, args: string[], event: any) {
         text: "mmm.... i don't know what that's meant to mean!"
     });
 
+    startTyping(event.channel);
     await wait(750);
 
     await webClient.chat.postMessage({
@@ -112,6 +125,10 @@ ev.on('member_joined_channel', async (event) => {
         });
 
         if (parentMessage.ok) {
+            startTyping(event.channel, parentMessage.ts)
+
+            await wait(750);
+
             await userClient.chat.postMessage({
                 as_user: true,
                 channel: event.channel,
@@ -176,6 +193,8 @@ botClient.action('cookie', async (ctx) => {
 
     const [origUserId, thread_ts] = action.value!.split('-');
 
+    startTyping(body.channel!.id, thread_ts)
+
     await wait(1000);
 
     if (origUserId !== body.user.id) {
@@ -185,6 +204,8 @@ botClient.action('cookie', async (ctx) => {
             text: `hey! that wasn't your cookie, <@${body.user.id}>!!`
         })
 
+        startTyping(body.channel!.id, thread_ts)
+
         await wait(750)
 
         await webClient.chat.postMessage({
@@ -192,6 +213,8 @@ botClient.action('cookie', async (ctx) => {
             thread_ts,
             text: `hmph... :kitty-facepalm:`
         })
+
+        startTyping(body.channel!.id, thread_ts)
 
         await wait(750)
 
