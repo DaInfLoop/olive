@@ -1,15 +1,28 @@
-export const HELP_MESSAGE = {
-    text: "(soon)",
-    blocks: [
-        {
-            type: 'section',
-            text: {
-                type: 'mrkdwn',
-                text: '(soon)'
+export const HELP_MESSAGE = [
+    { text: "hi! i'm olive, nice to meet you!" },
+    { text: "right now, i don't do too much..." },
+    {
+        text: "oh! but if you join <#C06SY7X0ESK>, i can give you a cookie! _(unless you're already in there...)_",
+        blocks: [
+            {
+                type: 'section',
+                text: {
+                    type: 'mrkdwn',
+                    text: 'oh! but if you join <#C06SY7X0ESK>, i can give you a cookie!'
+                }
+            },
+            {
+                type: 'context',
+                elements: [
+                    {
+                        type: 'mrkdwn',
+                        text: "_(unless you're already in there...)_"
+                    }
+                ]
             }
-        }
-    ]
-};
+        ]
+    }
+];
 
 const T1_JOIN_MESSAGES = [
     "hmm... oh! hi there, {}! :kitty-heart:",

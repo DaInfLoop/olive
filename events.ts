@@ -32,10 +32,21 @@ async function handleMessage(cmd: string, args: string[], event: any) {
     await wait(750);
 
     if (cmd === "help") {
-        return await webClient.chat.postMessage({
-            channel: event.channel,
-            ...HELP_MESSAGE
-        })
+        for (let i = 0; i < HELP_MESSAGE.length; i++) {
+            const message = HELP_MESSAGE[i]!;
+
+            await webClient.chat.postMessage({
+                channel: event.channel,
+                ...message
+            });
+
+            if (i < HELP_MESSAGE.length - 1) {
+                startTyping(event.channel);
+                await wait(750);
+            }
+        }
+
+        return;
     }
 
     if (cmd === "typing") {
