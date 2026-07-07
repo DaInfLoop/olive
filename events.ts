@@ -90,15 +90,13 @@ ev.on('message', async (event) => {
 
     if (!messageSubtypes.includes(event.subtype)) return;
 
-    if (event.channel.startsWith('D')) {
-        const channel = await getChannel(event.channel);
+    const channel = await getChannel(event.channel);
 
-        if (channel && channel.is_im) {
-            const args = event.text.trim().split(/ +/g);
-            const cmd = args.shift().toLowerCase();
+    if (channel && channel.is_im) {
+        const args = event.text.trim().split(/ +/g);
+        const cmd = args.shift().toLowerCase();
 
-            await handleMessage(cmd, args, event);
-        }
+        await handleMessage(cmd, args, event);
     }
 });
 
