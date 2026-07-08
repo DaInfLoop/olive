@@ -6,6 +6,7 @@ import { HELP_MESSAGE, JOIN_T1_MESSAGE } from "./messages";
 import type { BlockAction, BlockButtonAction, BlockElementAction, ButtonAction } from "@slack/bolt";
 import type { Channel } from "@slack/web-api/dist/types/response/ConversationsInfoResponse";
 import { startTyping } from ".";
+import { parseTarget } from "./utils";
 
 const ev = new EventEmitter();
 
@@ -55,6 +56,118 @@ async function handleMessage(cmd: string, args: string[], event: any) {
             channel: event.channel,
             text: "okay!"
         })
+    }
+
+    if (cmd === "msg") {
+        if (event.user !== "U07KVMBHH4L") {
+            return await webClient.chat.postMessage({
+                channel: event.channel,
+                text: "nuh uh!"
+            })
+        }
+
+        if (args.length < 2) {
+            return await webClient.chat.postMessage({
+                channel: event.channel,
+                text: "hey! you gotta tell me where to post stuff! and what to post..."
+            })
+        }
+
+        const args0 = args.shift()!;
+        const target = parseTarget(args0);
+
+        if (target === null) {
+            return await webClient.chat.postMessage({
+                channel: event.channel,
+                text: "mmm... i don't know where that is!"
+            })
+        }
+
+        if (target.type !== "message") {
+            if (target.type === "user") {
+                const userIm = await webClient.conversations.open({
+                    users: target.channel
+                });
+
+                if (userIm.ok && userIm.channel)
+                    target.channel = userIm.channel.id!
+            }
+
+            try {
+                await webClient.chat.postMessage({
+                    channel: target.channel,
+                    text: args.join(' ')
+                });
+
+                await webClient.reactions.add({
+                    channel: event.channel,
+                    timestamp: event.ts,
+                    name: 'white_check_mark'
+                })
+            } catch (err) {
+                console.error(err)
+                let e = err ?? "Unknown Error"
+
+                await webClient.reactions.add({
+                    channel: event.channel,
+                    timestamp: event.ts,
+                    name: 'x'
+                })
+
+                await webClient.chat.postMessage({
+                    channel: event.channel,
+                    thread_ts: event.ts,
+                    reply_broadcast: true,
+                    text: e.toString()
+                })
+            }
+        } else {
+            try {
+                const history = await webClient.conversations.history({
+                    channel: target.channel,
+                    latest: target.ts,
+                    oldest: target.ts,
+                    inclusive: true,
+                    limit: 1
+                });
+
+                if (!history.ok || 
+                    !history.messages ||
+                    history.messages.length < 1) throw new Error('Could not find message')
+
+                const targetTs = history.messages[0]?.thread_ts ?? target.ts
+
+                await webClient.chat.postMessage({
+                    channel: target.channel,
+                    thread_ts: targetTs,
+                    text: args.join(' ')
+                });
+
+                await webClient.reactions.add({
+                    channel: event.channel,
+                    timestamp: event.ts,
+                    name: 'white_check_mark'
+                })
+            } catch (err) {
+                console.error(err)
+                let e = err ?? "Unknown Error"
+
+                await webClient.reactions.add({
+                    channel: event.channel,
+                    timestamp: event.ts,
+                    name: 'x'
+                })
+
+                await webClient.chat.postMessage({
+                    channel: event.channel,
+                    thread_ts: event.ts,
+                    reply_broadcast: true,
+                    text: e.toString()
+                })
+            }            
+        }
+
+        return;
     }
 
     await webClient.chat.postMessage({
