@@ -131,7 +131,7 @@ async function handleMessage(cmd: string, args: string[], event: any) {
                     limit: 1
                 });
 
-                if (!history.ok || 
+                if (!history.ok ||
                     !history.messages ||
                     history.messages.length < 1) throw new Error('Could not find message')
 
@@ -164,7 +164,7 @@ async function handleMessage(cmd: string, args: string[], event: any) {
                     reply_broadcast: true,
                     text: e.toString()
                 })
-            }            
+            }
         }
 
         return;
@@ -216,8 +216,23 @@ ev.on('message', async (event) => {
 
     const channel = await getChannel(event.channel);
 
-    if (channel && channel.is_im) {
+    if (channel && (channel.is_im || channel.is_mpim)) {
         const args = event.text.trim().split(/ +/g);
+
+        if (args.length < 1) return;
+
+        if (channel.is_mpim) {
+            // Olive should only work in Group DMs if she's explicitly pinged
+            const args0 = args[0];
+            const parsed = parseTarget(args0);
+
+            if (!parsed) return;
+            if (parsed.type !== "user") return;
+            if (parsed.channel !== me) return;
+
+            args.shift();
+        }
+
         const cmd = args.shift().toLowerCase();
 
         await handleMessage(cmd, args, event);
